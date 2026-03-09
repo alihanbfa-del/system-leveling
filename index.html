@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYSTEM: MONARCH FINAL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Montserrat:wght@300;600;900&display=swap" rel="stylesheet">
+    <style>
+        :root { --neon: #00f2ff; --purple: #bc00ff; --red: #ff0044; --glass: rgba(6, 6, 12, 0.95); }
+        body { background: #020205; color: #fff; font-family: 'Montserrat', sans-serif; overflow-x: hidden; }
+        .system-font { font-family: 'Orbitron', sans-serif; }
+        
+        .glass { 
+            background: var(--glass); 
+            border: 1px solid rgba(0, 242, 255, 0.1); 
+            backdrop-filter: blur(20px); 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass:hover { border-color: var(--neon); box-shadow: 0 0 25px rgba(0, 242, 255, 0.05); }
+
+        @keyframes questEntry {
+            0% { opacity: 0; transform: translateX(-20px); }
+            100% { opacity: 1; transform: translateX(0); }
+        }
+        .quest-item { animation: questEntry 0.4s ease forwards; }
+
+        .bar-fill { height: 100%; transition: width 0.8s ease-in-out; }
+        .hp-fill { background: linear-gradient(90deg, #ff0044, #ff5f6d); box-shadow: 0 0 10px #ff0044; }
+        .mp-fill { background: linear-gradient(90deg, #00f2ff, #0066ff); box-shadow: 0 0 10px #00f2ff; }
+
+        .avatar-wrap { position: relative; cursor: pointer; border-radius: 12px; overflow: hidden; width: 120px; height: 120px; }
+        .avatar-overlay { 
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: 0.3s; font-family: 'Orbitron'; font-size: 10px; color: var(--neon);
+            background: rgba(0,0,0,0.6); text-align: center;
+        }
+        .avatar-wrap:hover .avatar-overlay { opacity: 1; }
+
+        @keyframes levelUp {
+            0% { background: white; opacity: 1; }
+            100% { background: transparent; opacity: 0; }
+        }
+        #lvl-flash { position: fixed; inset: 0; pointer-events: none; z-index: 1000; display: none; }
+
+        .nav-btn { transition: 0.3s; opacity: 0.4; font-size: 11px; }
+        .nav-btn.active { opacity: 1; color: var(--neon); border-bottom: 2px solid var(--neon); }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .error-shake { animation: shake 0.3s ease-in-out 2; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div id="lvl-flash"></div>
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- TOP SECTION -->
+        <header class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- PROFILE -->
+            <div id="profile-card" class="lg:col-span-5 glass p-6 rounded-xl border-l-4 border-cyan-500">
+                <div class="flex gap-6">
+                    <div class="avatar-wrap flex-shrink-0" onclick="document.getElementById('fileInput').click()">
+                        <img id="main-avatar" src="https://i.pinimg.com/originals/f3/8d/63/f38d6332159048f07447472097893a90.gif" class="w-full h-full object-cover">
+                        <div class="avatar-overlay uppercase">Update<br>Data</div>
+                        <input type="file" id="fileInput" class="hidden" accept="image/*" onchange="updateAvatar(this)">
+                    </div>
+                    
+                    <div class="flex-grow space-y-3">
+                        <h1 class="system-font text-xl font-black italic">MONARCH <span id="lvl-txt" class="text-cyan-400 ml-2">LVL 1</span></h1>
+                        <div class="space-y-2">
+                            <div>
+                                <div class="flex justify-between text-[9px] system-font text-red-500 mb-1"><span>HP</span><span id="hp-val">100/100</span></div>
+                                <div class="h-2 bg-white/5 rounded-full overflow-hidden"><div id="hp-bar" class="bar-fill hp-fill" style="width: 100%"></div></div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[9px] system-font text-cyan-500 mb-1"><span>MP</span><span id="mp-val">100/100</span></div>
+                                <div class="h-2 bg-white/5 rounded-full overflow-hidden"><div id="mp-bar" class="bar-fill mp-fill" style="width: 100%"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-between border-t border-white/5 pt-4 text-center">
+                    <div><p class="text-[9px] text-gray-500 system-font">GOLD</p><p id="gold" class="text-lg font-black text-yellow-500">0</p></div>
+                    <div><p class="text-[9px] text-gray-500 system-font">EXP</p><p id="exp" class="text-lg font-black text-purple-500">0</p></div>
+                    <div><p class="text-[9px] text-gray-500 system-font">COMPLETED</p><p id="done" class="text-lg font-black">0</p></div>
+                </div>
+            </div>
+
+            <!-- GATE & CLOCK -->
+            <div id="gate-card" class="lg:col-span-4 glass p-6 rounded-xl text-center flex flex-col justify-center">
+                <div id="clock" class="text-[10px] system-font text-cyan-500 mb-2">TIME: 00:00:00</div>
+                <div id="timer" class="text-5xl system-font font-black mb-4">45:00</div>
+                <button onclick="toggleGate()" id="gate-btn" class="w-full py-2 bg-white text-black system-font font-black text-[10px] hover:bg-cyan-400 transition-all uppercase italic">Войти в Врата</button>
+            </div>
+
+            <!-- SHOP -->
+            <div class="lg:col-span-3 glass p-6 rounded-xl space-y-2">
+                <h3 class="system-font text-[10px] text-gray-500 mb-2">SYSTEM SHOP</h3>
+                <button onclick="buy('hp')" class="w-full flex justify-between p-2 bg-white/5 rounded text-[10px] system-font hover:bg-white/10"><span>HP POTION</span><span class="text-yellow-500">500G</span></button>
+                <button onclick="buy('mp')" class="w-full flex justify-between p-2 bg-white/5 rounded text-[10px] system-font hover:bg-white/10"><span>MP ELIXIR</span><span class="text-yellow-500">300G</span></button>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div class="lg:col-span-3">
+                <!-- MOTIVATION -->
+                <div id="motivation-box" class="glass p-4 rounded-xl border-l-4 border-purple-500 mb-6 group">
+                    <p class="text-[9px] system-font text-purple-400 mb-1 tracking-widest uppercase">System Message:</p>
+                    <p id="daily-quote" class="text-sm italic text-gray-300">«Загрузка директивы...»</p>
+                </div>
+
+                <!-- NAVIGATION -->
+                <div class="flex gap-4 border-b border-white/5 pb-2 mb-6 overflow-x-auto" id="day-nav">
+                    <button onclick="setDay('1')" id="d-1" class="nav-btn py-2 px-3 system-font">ПН</button>
+                    <button onclick="setDay('2')" id="d-2" class="nav-btn py-2 px-3 system-font">ВТ</button>
+                    <button onclick="setDay('3')" id="d-3" class="nav-btn py-2 px-3 system-font">СР</button>
+                    <button onclick="setDay('4')" id="d-4" class="nav-btn py-2 px-3 system-font">ЧТ</button>
+                    <button onclick="setDay('5')" id="d-5" class="nav-btn py-2 px-3 system-font">ПТ</button>
+                    <button onclick="setDay('6')" id="d-6" class="nav-btn py-2 px-3 system-font">СБ</button>
+                    <button onclick="setDay('0')" id="d-0" class="nav-btn py-2 px-3 system-font">ВС</button>
+                </div>
+
+                <div id="quest-list" class="space-y-3"></div>
+            </div>
+
+            <div class="space-y-4">
+                <button onclick="openModal()" class="w-full py-6 bg-cyan-600 system-font font-black text-xs rounded-xl hover:bg-cyan-400 shadow-lg transition-all uppercase">+ NEW QUEST</button>
+                <div class="glass p-4 rounded-xl text-[10px] leading-relaxed opacity-50 italic">
+                    Каждое выполненное задание приближает тебя к пробуждению истинной силы.
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL -->
+    <div id="modal" class="fixed inset-0 bg-black/90 hidden z-[100] flex items-center justify-center p-6 backdrop-blur-md">
+        <div id="modal-content" class="glass p-8 rounded-xl max-w-sm w-full border-cyan-500 transition-all scale-95">
+            <h2 class="system-font text-cyan-400 text-center mb-6 font-black italic">NEW MISSION</h2>
+            <input type="text" id="q-title" placeholder="Описание задачи..." class="w-full bg-white/5 p-3 rounded mb-4 outline-none border border-white/10 text-sm focus:border-cyan-500">
+            <select id="q-rank" class="w-full bg-black p-3 rounded mb-6 text-cyan-400 text-xs border border-white/10">
+                <option value="E">RANK E</option><option value="D">RANK D</option>
+                <option value="C">RANK C</option><option value="B">RANK B</option>
+                <option value="S">RANK S</option>
+            </select>
+            <div class="flex gap-2">
+                <button onclick="addQuest()" class="flex-1 bg-cyan-600 py-3 rounded system-font font-black text-[10px]">ПРИНЯТЬ</button>
+                <button onclick="closeModal()" class="flex-1 bg-white/10 py-3 rounded system-font text-[10px]">ОТМЕНА</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация
+        let state = JSON.parse(localStorage.getItem('monarch_v28')) || {
+            hp: 100, mp: 100, gold: 0, exp: 0, lvl: 1, done: 0,
+            avatar: 'https://i.pinimg.com/originals/f3/8d/63/f38d6332159048f07447472097893a90.gif',
+            quests: [], day: new Date().getDay().toString()
+        };
+
+        const quotes = [
+            "Предел существует только для тех, кто боится его переступить.",
+            "Твоя слабость — это лишь топливо для будущей силы. Сжигай её.",
+            "Мир не дает наград за намерения. Только за действия.",
+            "Боль — это доказательство того, что ты все еще жив и растешь.",
+            "Твой уровень — это отражение твоей дисциплины.",
+            "Подними голову. Монархи не смотрят под ноги."
+        ];
+
+        let gateTimer = null;
+        let secLeft = 45 * 60;
+
+        function updateAvatar(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => { state.avatar = e.target.result; save(); };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function toggleGate() {
+            if (gateTimer) {
+                clearInterval(gateTimer); gateTimer = null;
+                document.getElementById('gate-btn').innerText = "Войти в Врата";
+            } else {
+                if (state.mp < 10) { triggerShake('#profile-card'); return; }
+                state.mp -= 10;
+                document.getElementById('gate-btn').innerText = "ВНУТРИ...";
+                gateTimer = setInterval(() => {
+                    secLeft--; updateTimerDisp();
+                    if(secLeft <= 0) {
+                        state.exp += 50; resetGate(); 
+                        alert("Врата зачищены! +50 EXP"); checkLevel(); save();
+                    }
+                }, 1000);
+            }
+            save();
+        }
+
+        function updateTimerDisp() {
+            const m = Math.floor(secLeft / 60);
+            const s = secLeft % 60;
+            document.getElementById('timer').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+
+        function resetGate() {
+            clearInterval(gateTimer); gateTimer = null; secLeft = 45 * 60;
+            updateTimerDisp(); document.getElementById('gate-btn').innerText = "Войти в Врата";
+        }
+
+        function addQuest() {
+            const t = document.getElementById('q-title').value;
+            const r = document.getElementById('q-rank').value;
+            if(!t) return;
+            state.quests.push({ id: Date.now(), title: t, rank: r, day: state.day });
+            closeModal(); save();
+        }
+
+        function completeQuest(id) {
+            const q = state.quests.find(x => x.id === id);
+            const rew = { E: 100, D: 300, C: 700, B: 1500, S: 5000 };
+            state.gold += rew[q.rank]; state.exp += 20; state.done++;
+            state.quests = state.quests.filter(x => x.id !== id);
+            checkLevel(); save();
+        }
+
+        function buy(item) {
+            if(item === 'hp' && state.gold >= 500) { state.gold -= 500; state.hp = 100; }
+            else if(item === 'mp' && state.gold >= 300) { state.gold -= 300; state.mp = 100; }
+            else { triggerShake('#profile-card'); return; }
+            save();
+        }
+
+        function checkLevel() {
+            if (state.exp >= 100) {
+                state.lvl++; state.exp = 0; state.hp = 100; state.mp = 100;
+                flashEffect();
+            }
+        }
+
+        function save() {
+            localStorage.setItem('monarch_v28', JSON.stringify(state));
+            render();
+        }
+
+        function render() {
+            document.getElementById('main-avatar').src = state.avatar;
+            document.getElementById('hp-bar').style.width = state.hp + '%';
+            document.getElementById('mp-bar').style.width = state.mp + '%';
+            document.getElementById('hp-val').innerText = `${state.hp}/100`;
+            document.getElementById('mp-val').innerText = `${state.mp}/100`;
+            document.getElementById('lvl-txt').innerText = `LVL ${state.lvl}`;
+            document.getElementById('gold').innerText = state.gold;
+            document.getElementById('exp').innerText = state.exp;
+            document.getElementById('done').innerText = state.done;
+
+            const list = document.getElementById('quest-list');
+            list.innerHTML = '';
+            state.quests.filter(q => q.day === state.day).forEach(q => {
+                const div = document.createElement('div');
+                div.className = "quest-item glass p-4 rounded-xl flex justify-between items-center border-l-2 border-cyan-500";
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-[10px] text-cyan-400 font-bold system-font">${q.rank}</span>
+                        <span class="text-sm uppercase font-medium">${q.title}</span>
+                    </div>
+                    <button onclick="completeQuest(${q.id})" class="w-8 h-8 flex items-center justify-center border border-white/10 rounded hover:bg-white hover:text-black transition-all">✓</button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function setDay(d) {
+            state.day = d;
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('d-'+d).classList.add('active');
+            render();
+        }
+
+        function flashEffect() {
+            const f = document.getElementById('lvl-flash');
+            f.style.display = 'block'; f.style.animation = 'levelUp 0.8s forwards';
+            setTimeout(() => f.style.display = 'none', 800);
+        }
+
+        function triggerShake(selector) {
+            const el = document.querySelector(selector);
+            el.classList.add('error-shake');
+            setTimeout(() => el.classList.remove('error-shake'), 600);
+        }
+
+        function openModal() { document.getElementById('modal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+        // Таймер часов
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = `TIME: ${now.toTimeString().split(' ')[0]}`;
+        }, 1000);
+
+        // Цитата дня
+        document.getElementById('daily-quote').innerText = `«${quotes[Math.floor(Math.random() * quotes.length)]}»`;
+
+        setDay(state.day);
+    </script>
+</body>
+</html>
